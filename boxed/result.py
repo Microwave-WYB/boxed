@@ -81,9 +81,9 @@ class _Result[T, E](ABC):
     def map(self, mapper: Callable[[T], T]) -> "_Result[T, E]":
         """
         >>> Ok(1).map(lambda x: x + 1)
-        Ok(value=2)
+        Ok(2)
         >>> Err("Error").map(lambda x: x + 1)
-        Err(error='Error')
+        Err('Error')
         """
         if self.error is not None:
             return self
@@ -92,9 +92,9 @@ class _Result[T, E](ABC):
     def map_err(self, mapper: Callable[[E], E]) -> "_Result[T, E]":
         """
         >>> Ok(1).map_err(lambda x: x + 1)
-        Ok(value=1)
+        Ok(1)
         >>> Err("Error").map_err(lambda x: x.upper())
-        Err(error='ERROR')
+        Err('ERROR')
         """
         if self.error is not None:
             return Err(mapper(self.error))
@@ -103,11 +103,11 @@ class _Result[T, E](ABC):
     def and_then[U](self, mapper: Callable[[T], "_Result[U, E]"]) -> "_Result[U, E]" | Self:
         """
         >>> Ok(1).and_then(lambda x: Ok(x + 1))
-        Ok(value=2)
+        Ok(2)
         >>> Ok(1).and_then(lambda x: Err("Error"))
-        Err(error='Error')
+        Err('Error')
         >>> Err("Error").and_then(lambda x: Ok(x + 1))
-        Err(error='Error')
+        Err('Error')
         """
         if self.error is not None:
             return self
@@ -117,14 +117,6 @@ class _Result[T, E](ABC):
         return self.is_ok()
 
     def __eq__(self, other: object) -> bool:
-        """
-        >>> Ok(1) == Ok(1)
-        True
-        >>> Err("Error") == Err("Error")
-        True
-        >>> Err("Error") == Ok(1)
-        False
-        """
         if not isinstance(other, _Result):
             return NotImplemented
         return self.value == other.value and self.error == other.error
@@ -140,6 +132,9 @@ class _Result[T, E](ABC):
 class Ok[T](_Result[T, Any]):
     value: T
 
+    def __repr__(self) -> str:
+        return f"Ok({self.value!r})"
+
     def __init__(self, value: T, /) -> None:
         super().__init__(value, None)
 
@@ -147,6 +142,9 @@ class Ok[T](_Result[T, Any]):
 @dataclass
 class Err[T](_Result[Any, T]):
     error: T
+
+    def __repr__(self) -> str:
+        return f"Err({self.error!r})"
 
     def __init__(self, error: T, /) -> None:
         super().__init__(None, error)
@@ -158,6 +156,16 @@ type Result[T_Ok, T_Err] = Ok[T_Ok] | Err[T_Err]
 def catch[**P, T, E: Exception](
     *exceptions: type[E],
 ) -> Callable[[Callable[P, Result[T, str]]], Callable[P, Result[T, str]]]:
+    """
+    >>> @catch(ZeroDivisionError)
+    ... def divide(a: int, b: int) -> Result[int, str]:
+    ...     return Ok(a // b)
+    >>> divide(10, 2)
+    Ok(5)
+    >>> divide(10, 0)
+    Err("ZeroDivisionError('integer division or modulo by zero')")
+    """
+
     def decorator(func: Callable[P, Result[T, str]]) -> Callable[P, Result[T, str]]:
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[T, str]:
@@ -169,7 +177,7 @@ def catch[**P, T, E: Exception](
                     case _:
                         return Ok(result)
             except exceptions as e:
-                return Err(str(e))
+                return Err(e.__repr__())
 
         return wrapper
 

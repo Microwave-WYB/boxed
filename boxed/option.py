@@ -80,7 +80,7 @@ class _Option[T]:
     def map(self, mapper: Callable[[T], T], /) -> "_Option[T]":
         """
         >>> Some(1).map(lambda x: x + 1)
-        Some(value=2)
+        Some(2)
         >>> Null().map(lambda x: x + 1)
         Null()
         """
@@ -91,7 +91,7 @@ class _Option[T]:
     def and_then[U](self, mapper: Callable[[T], "_Option[U]"], /) -> "_Option[U]":
         """
         >>> Some(1).and_then(lambda x: Some(x + 1))
-        Some(value=2)
+        Some(2)
         >>> Some(1).and_then(lambda x: Null())
         Null()
         """
@@ -102,11 +102,11 @@ class _Option[T]:
     def or_(self, optb: "_Option[T]", /) -> "_Option[T]":
         """
         >>> Some(1).or_(Some(2))
-        Some(value=1)
+        Some(1)
         >>> Some(1).or_(Null())
-        Some(value=1)
+        Some(1)
         >>> Null().or_(Some(2))
-        Some(value=2)
+        Some(2)
         >>> Null().or_(Null())
         Null()
         """
@@ -117,9 +117,9 @@ class _Option[T]:
     def or_else(self, f: Callable[[], "_Option[T]"], /) -> "_Option[T]":
         """
         >>> Some(1).or_else(lambda: Null())
-        Some(value=1)
+        Some(1)
         >>> Null().or_else(lambda: Some(2))
-        Some(value=2)
+        Some(2)
         """
         if self.value is None:
             return f()
@@ -149,10 +149,16 @@ class _Option[T]:
 class Some[T](_Option[T]):
     value: T
 
+    def __repr__(self) -> str:
+        return f"Some({self.value!r})"
+
 
 @dataclass(frozen=True)
 class Null[T: None](_Option[T]):
     value = None
+
+    def __repr__(self) -> str:
+        return "Null()"
 
 
 type Option[T] = Some[T] | Null[None]
