@@ -153,8 +153,8 @@ class Err[T](_Result[Any, T]):
 type Result[T_Ok, T_Err] = Ok[T_Ok] | Err[T_Err]
 
 
-def catch[**P, T, E: Exception](
-    *exceptions: type[E],
+def catch[**P, T](
+    *exceptions: type[Exception],
 ) -> Callable[[Callable[P, Result[T, str]]], Callable[P, Result[T, str]]]:
     """
     >>> @catch(ZeroDivisionError)
