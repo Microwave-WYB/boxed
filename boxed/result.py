@@ -7,10 +7,9 @@ from typing import Any, Self
 from boxed.error import UnwrapError
 
 
+@dataclass
 class _Result[T, E](ABC):
-    def __init__(self, value: T, error: E) -> None:
-        self.value = value
-        self.error = error
+    value: T | E
 
     def unwrap(self) -> T:
         """
@@ -19,11 +18,13 @@ class _Result[T, E](ABC):
         >>> Err("Error").unwrap()
         Traceback (most recent call last):
             ...
-        boxed.error.UnwrapError: Error
+        boxed.error.UnwrapError
         """
-        if self.error is not None:
-            raise UnwrapError(self.error)
-        return self.value
+        match self:
+            case Ok(value):
+                return value
+            case _:
+                raise UnwrapError
 
     def expect(self, msg: str) -> T:
         """
@@ -34,9 +35,11 @@ class _Result[T, E](ABC):
             ...
         boxed.error.UnwrapError: Error
         """
-        if self.error is not None:
-            raise UnwrapError(msg)
-        return self.value
+        match self:
+            case Ok(value):
+                return value
+            case _:
+                raise UnwrapError(msg)
 
     def unwrap_or(self, default: T) -> T:
         """
@@ -45,9 +48,11 @@ class _Result[T, E](ABC):
         >>> Err("Error").unwrap_or(2)
         2
         """
-        if self.error is not None:
-            return default
-        return self.value
+        match self:
+            case Ok(value):
+                return value
+            case _:
+                return default
 
     def unwrap_or_else(self, default: Callable[[], T]) -> T:
         """
@@ -56,9 +61,11 @@ class _Result[T, E](ABC):
         >>> Err("Error").unwrap_or_else(lambda: 2)
         2
         """
-        if self.error is not None:
-            return default()
-        return self.value
+        match self:
+            case Ok(value):
+                return value
+            case _:
+                return default()
 
     def is_ok(self) -> bool:
         """
@@ -67,7 +74,11 @@ class _Result[T, E](ABC):
         >>> Err("Error").is_ok()
         False
         """
-        return self.error is None
+        match self:
+            case Ok(_):
+                return True
+            case _:
+                return False
 
     def is_err(self) -> bool:
         """
@@ -76,7 +87,11 @@ class _Result[T, E](ABC):
         >>> Err("Error").is_err()
         True
         """
-        return self.error is not None
+        match self:
+            case Ok(_):
+                return False
+            case _:
+                return True
 
     def map(self, mapper: Callable[[T], T]) -> "_Result[T, E]":
         """
@@ -85,9 +100,11 @@ class _Result[T, E](ABC):
         >>> Err("Error").map(lambda x: x + 1)
         Err('Error')
         """
-        if self.error is not None:
-            return self
-        return Ok(mapper(self.value))
+        match self:
+            case Ok(value):
+                return Ok(mapper(value))
+            case _:
+                return self
 
     def map_err(self, mapper: Callable[[E], E]) -> "_Result[T, E]":
         """
@@ -96,9 +113,11 @@ class _Result[T, E](ABC):
         >>> Err("Error").map_err(lambda x: x.upper())
         Err('ERROR')
         """
-        if self.error is not None:
-            return Err(mapper(self.error))
-        return self
+        match self:
+            case Err(error):
+                return Err(mapper(error))
+            case _:
+                return self
 
     def and_then[U](self, mapper: Callable[[T], "_Result[U, E]"]) -> "_Result[U, E]" | Self:
         """
@@ -109,17 +128,23 @@ class _Result[T, E](ABC):
         >>> Err("Error").and_then(lambda x: Ok(x + 1))
         Err('Error')
         """
-        if self.error is not None:
-            return self
-        return mapper(self.value)
+        match self:
+            case Ok(value):
+                return mapper(value)
+            case _:
+                return self
 
     def __bool__(self) -> bool:
         return self.is_ok()
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, _Result):
-            return NotImplemented
-        return self.value == other.value and self.error == other.error
+        match self, other:
+            case (Ok(a), Ok(b)):
+                return a == b
+            case (Err(a), Err(b)):
+                return a == b
+            case _:
+                return False
 
     def __or__(self, other: T) -> T:
         return self.unwrap_or(other)
@@ -135,19 +160,13 @@ class Ok[T](_Result[T, Any]):
     def __repr__(self) -> str:
         return f"Ok({self.value!r})"
 
-    def __init__(self, value: T, /) -> None:
-        super().__init__(value, None)
-
 
 @dataclass
 class Err[T](_Result[Any, T]):
-    error: T
+    value: T
 
     def __repr__(self) -> str:
-        return f"Err({self.error!r})"
-
-    def __init__(self, error: T, /) -> None:
-        super().__init__(None, error)
+        return f"Err({self.value!r})"
 
 
 type Result[T_Ok, T_Err] = Ok[T_Ok] | Err[T_Err]
