@@ -111,6 +111,111 @@ match order:
         print("Equal")
 ```
 
+## Examples
+
+### Guessing Game
+
+```python
+import random
+
+from boxed.ordering import Ordering, cmp
+from boxed.result import Err, Ok, Result
+
+
+def get_input() -> Result[str, str]:
+    try:
+        return Ok(input("Enter your guess: "))
+    except EOFError:
+        return Err("Unexpected end of input.")
+
+
+def parse_guess(input_str: str) -> Result[int, str]:
+    try:
+        num = int(input_str)
+        if 1 <= num <= 100:
+            return Ok(num)
+        else:
+            return Err("Please enter a number between 1 and 100.")
+    except ValueError:
+        return Err("Invalid input. Please enter a number.")
+
+
+def play_game() -> None:
+    secret_number = random.randint(1, 100)
+    print("Welcome to the Guess the Number game!")
+    print("I'm thinking of a number between 1 and 100.")
+
+    while True:
+        match get_input().and_then(parse_guess):
+            case Ok(guess):
+                match cmp(guess, secret_number):
+                    case Ordering.Less:
+                        print("Too low. Try again.")
+                    case Ordering.Greater:
+                        print("Too high. Try again.")
+                    case Ordering.Equal:
+                        print("Congratulations! You guessed the number!")
+                        return
+            case Err(msg):
+                print(msg)
+
+
+if __name__ == "__main__":
+    play_game()
+
+```
+
+### BLE Advertisement Parser
+
+```python
+from collections.abc import Iterator
+from dataclasses import dataclass
+
+from boxed.result import Err, Ok, Result
+
+
+@dataclass(frozen=True)
+class AdStruct:
+    data_type: int
+    data: bytes
+
+
+def parse_next(data: bytes) -> Result[tuple[AdStruct, bytes], str]:
+    match list(data):
+        case [l, t, *d]:
+            return Ok((AdStruct(t, bytes(d[:l])), bytes(d[l:])))
+        case _:
+            return Err("Invalid data format.")
+
+
+def ad_structs(data: bytes) -> Iterator[AdStruct]:
+    match data:
+        case b"":
+            return
+        case _:
+            ad, rest = parse_next(data).unwrap()
+            yield ad
+            yield from ad_structs(rest)
+
+
+if __name__ == "__main__":
+    data = bytes(
+        [0x02, 0x01, 0x06]
+        + [
+            0x06,
+            0xFF,
+            0x01,
+            0x02,
+            0x03,
+            0x04,
+            0x05,
+        ]
+    )
+    for ad in ad_structs(data):
+        print(ad)
+
+```
+
 ## Why use Boxed?
 
 Boxed brings Rust-like error handling and optional value management to Python, allowing for more expressive and safer code. It's particularly useful for developers who appreciate Rust's approach to these concepts and want to apply similar patterns in their Python projects.
