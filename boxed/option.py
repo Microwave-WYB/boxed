@@ -9,69 +9,150 @@ from boxed.error import UnwrapError
 
 class _Option[T]:
     def __init__(self, value: Optional[T]) -> None:
-        self._value = value
+        self.value = value
 
     def unwrap(self) -> T:
-        if self._value is None:
+        """
+        >>> Some(1).unwrap()
+        1
+        >>> Null().unwrap()
+        Traceback (most recent call last):
+            ...
+        boxed.error.UnwrapError
+        """
+        if self.value is None:
             raise UnwrapError
-        return self._value
+        return self.value
 
     def unwrap_or(self, default: T, /) -> T:
-        if self._value is None:
+        """
+        >>> Some(1).unwrap_or(2)
+        1
+        >>> Null().unwrap_or(2)
+        2
+        """
+        if self.value is None:
             return default
-        return self._value
+        return self.value
 
     def unwrap_or_else(self, f: Callable[[], T], /) -> T:
-        if self._value is None:
+        """
+        >>> Some(1).unwrap_or_else(lambda: 2)
+        1
+        >>> Null().unwrap_or_else(lambda: 2)
+        2
+        """
+        if self.value is None:
             return f()
-        return self._value
+        return self.value
 
     def expect(self, msg: str, /) -> T:
-        if self._value is None:
+        """
+        >>> Some(1).expect("Error")
+        1
+        >>> Null().expect("Error")
+        Traceback (most recent call last):
+            ...
+        boxed.error.UnwrapError: Error
+        """
+        if self.value is None:
             raise UnwrapError(msg)
-        return self._value
+        return self.value
 
     def is_some(self) -> bool:
-        return self._value is not None
+        """
+        >>> Some(1).is_some()
+        True
+        >>> Null().is_some()
+        False
+        """
+        return self.value is not None
 
     def is_none(self) -> bool:
-        return self._value is None
+        """
+        >>> Some(1).is_none()
+        False
+        >>> Null().is_none()
+        True
+        """
+        return self.value is None
 
     def map(self, mapper: Callable[[T], T], /) -> "_Option[T]":
-        if self._value is None:
+        """
+        >>> Some(1).map(lambda x: x + 1)
+        Some(value=2)
+        >>> Null().map(lambda x: x + 1)
+        Null()
+        """
+        if self.value is None:
             return Null()
-        return Some(mapper(self._value))
+        return Some(mapper(self.value))
 
     def and_then[U](self, mapper: Callable[[T], "_Option[U]"], /) -> "_Option[U]":
-        if self._value is None:
+        """
+        >>> Some(1).and_then(lambda x: Some(x + 1))
+        Some(value=2)
+        >>> Some(1).and_then(lambda x: Null())
+        Null()
+        """
+        if self.value is None:
             return Null()
-        return mapper(self._value)
+        return mapper(self.value)
 
     def or_(self, optb: "_Option[T]", /) -> "_Option[T]":
-        if self._value is None:
+        """
+        >>> Some(1).or_(Some(2))
+        Some(value=1)
+        >>> Some(1).or_(Null())
+        Some(value=1)
+        >>> Null().or_(Some(2))
+        Some(value=2)
+        >>> Null().or_(Null())
+        Null()
+        """
+        if self.value is None:
             return optb
         return self
 
     def or_else(self, f: Callable[[], "_Option[T]"], /) -> "_Option[T]":
-        if self._value is None:
+        """
+        >>> Some(1).or_else(lambda: Null())
+        Some(value=1)
+        >>> Null().or_else(lambda: Some(2))
+        Some(value=2)
+        """
+        if self.value is None:
             return f()
         return self
 
-    def take(self) -> T:
-        if self._value is None:
-            raise ValueError
-        tmp = self._value
-        self._value = None
-        return tmp
+    def __bool__(self) -> bool:
+        return self.is_some()
+
+    def __eq__(self, other: object, /) -> bool:
+        if self.value is None:
+            return other is None
+        return self.value == other
+
+    def __repr__(self) -> str:
+        if self.value is None:
+            return "Null()"
+        return f"Some({self.value!r})"
+
+    def __or__(self, optb: "_Option[T]", /) -> "_Option[T]":
+        return self.or_(optb)
+
+    def __rshift__[U](self, mapper: Callable[[T], "_Option[U]"], /) -> "_Option[U]":
+        return self.and_then(mapper)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Some[T](_Option[T]):
     value: T
 
 
-@dataclass
-class Null[T: None](_Option[T]): ...
+@dataclass(frozen=True)
+class Null[T: None](_Option[T]):
+    value = None
 
 
 type Option[T] = Some[T] | Null[None]
