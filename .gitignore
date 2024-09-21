@@ -1,0 +1,6 @@
+.python-version
+.venv/
+__pycache__/
+
+# not yet ready:
+presentation

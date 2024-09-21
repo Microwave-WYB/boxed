@@ -1,0 +1,10 @@
+[project]
+name = "boxed"
+version = "0.1.0"
+description = "Rust-like boxed types in Python"
+readme = "README.md"
+
+# We heavily rely on the new generic syntax in Python 3.12
+requires-python = ">=3.12"
+
+dependencies = []
