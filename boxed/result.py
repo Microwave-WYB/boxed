@@ -196,7 +196,7 @@ def catch[**P, T](func: Callable[P, T]) -> Callable[P, Result[T, Exception]]:
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[T, Exception]:
         try:
             result = func(*args, **kwargs)
-            return Ok(result)
+            return Ok(result) if not isinstance(result, Result) else result
         except Exception as e:
             return Err(e)
 
