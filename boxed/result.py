@@ -18,13 +18,15 @@ class Result[T, E](ABC):
         >>> Err("Error").unwrap()
         Traceback (most recent call last):
             ...
-        boxed.error.UnwrapError
+        boxed.error.UnwrapError: Error
         """
         match self:
             case Ok(value):
                 return value
+            case Err(msg):
+                raise UnwrapError(msg)
             case _:
-                raise UnwrapError
+                raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
     def expect(self, msg: str) -> T:
         """
@@ -38,8 +40,10 @@ class Result[T, E](ABC):
         match self:
             case Ok(value):
                 return value
-            case _:
+            case Err(_):
                 raise UnwrapError(msg)
+            case _:
+                raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
     def unwrap_or(self, default: T) -> T:
         """
@@ -51,8 +55,10 @@ class Result[T, E](ABC):
         match self:
             case Ok(value):
                 return value
-            case _:
+            case Err(_):
                 return default
+            case _:
+                raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
     def unwrap_or_else(self, default: Callable[[], T]) -> T:
         """
@@ -64,8 +70,10 @@ class Result[T, E](ABC):
         match self:
             case Ok(value):
                 return value
-            case _:
+            case Err(_):
                 return default()
+            case _:
+                raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
     def is_ok(self) -> bool:
         """
@@ -77,8 +85,10 @@ class Result[T, E](ABC):
         match self:
             case Ok(_):
                 return True
-            case _:
+            case Err(_):
                 return False
+            case _:
+                raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
     def is_err(self) -> bool:
         """
@@ -90,8 +100,10 @@ class Result[T, E](ABC):
         match self:
             case Ok(_):
                 return False
-            case _:
+            case Err(_):
                 return True
+            case _:
+                raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
     def map(self, mapper: Callable[[T], T]) -> "Result[T, E]":
         """
@@ -103,8 +115,10 @@ class Result[T, E](ABC):
         match self:
             case Ok(value):
                 return Ok(mapper(value))
-            case _:
+            case Err(_):
                 return self
+            case _:
+                raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
     def map_err(self, mapper: Callable[[E], E]) -> "Result[T, E]":
         """
@@ -116,8 +130,10 @@ class Result[T, E](ABC):
         match self:
             case Err(error):
                 return Err(mapper(error))
-            case _:
+            case Ok(_):
                 return self
+            case _:
+                raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
     def and_then[U](self, mapper: Callable[[T], "Result[U, E]"]) -> "Result[U, E]" | Self:
         """
@@ -131,8 +147,10 @@ class Result[T, E](ABC):
         match self:
             case Ok(value):
                 return mapper(value)
-            case _:
+            case Err(_):
                 return self
+            case _:
+                raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
     def __bool__(self) -> bool:
         return self.is_ok()
@@ -165,32 +183,21 @@ class Err[T](Result[Any, T]):
         return f"Err({self.value!r})"
 
 
-def catch[**P, T](
-    *exceptions: type[Exception],
-) -> Callable[[Callable[P, Result[T, str]]], Callable[P, Result[T, str]]]:
+def catch[**P, T](func: Callable[P, T]) -> Callable[P, Result[T, Exception]]:
     """
-    >>> @catch(ZeroDivisionError)
-    ... def divide(a: int, b: int) -> Result[int, str]:
-    ...     return Ok(a // b)
-    >>> divide(10, 2)
-    Ok(5)
-    >>> divide(10, 0)
-    Err("ZeroDivisionError('integer division or modulo by zero')")
+    >>> @catch
+    ... def div(a: float, b: float) -> float:
+    ...     return a / b
+    >>> div(10, 0)
+    Err(ZeroDivisionError('division by zero'))
     """
 
-    def decorator(func: Callable[P, Result[T, str]]) -> Callable[P, Result[T, str]]:
-        @wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[T, str]:
-            try:
-                result = func(*args, **kwargs)
-                match result:
-                    case Ok(_) | Err(_):
-                        return result
-                    case _:
-                        return Ok(result)
-            except exceptions as e:
-                return Err(e.__repr__())
+    @wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[T, Exception]:
+        try:
+            result = func(*args, **kwargs)
+            return Ok(result)
+        except Exception as e:
+            return Err(e)
 
-        return wrapper
-
-    return decorator
+    return wrapper
