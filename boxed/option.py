@@ -145,7 +145,7 @@ class _Option[T]:
         return self.and_then(mapper)
 
 
-@dataclass(frozen=True)
+@dataclass
 class Some[T](_Option[T]):
     value: T
 
@@ -153,9 +153,9 @@ class Some[T](_Option[T]):
         return f"Some({self.value!r})"
 
 
-@dataclass(frozen=True)
 class Null[T: None](_Option[T]):
-    value = None
+    def __init__(self) -> None:
+        super().__init__(None)
 
     def __repr__(self) -> str:
         return "Null()"

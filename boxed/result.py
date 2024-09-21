@@ -8,7 +8,7 @@ from boxed.error import UnwrapError
 
 
 @dataclass
-class _Result[T, E](ABC):
+class Result[T, E](ABC):
     value: T | E
 
     def unwrap(self) -> T:
@@ -93,7 +93,7 @@ class _Result[T, E](ABC):
             case _:
                 return True
 
-    def map(self, mapper: Callable[[T], T]) -> "_Result[T, E]":
+    def map(self, mapper: Callable[[T], T]) -> "Result[T, E]":
         """
         >>> Ok(1).map(lambda x: x + 1)
         Ok(2)
@@ -106,7 +106,7 @@ class _Result[T, E](ABC):
             case _:
                 return self
 
-    def map_err(self, mapper: Callable[[E], E]) -> "_Result[T, E]":
+    def map_err(self, mapper: Callable[[E], E]) -> "Result[T, E]":
         """
         >>> Ok(1).map_err(lambda x: x + 1)
         Ok(1)
@@ -119,7 +119,7 @@ class _Result[T, E](ABC):
             case _:
                 return self
 
-    def and_then[U](self, mapper: Callable[[T], "_Result[U, E]"]) -> "_Result[U, E]" | Self:
+    def and_then[U](self, mapper: Callable[[T], "Result[U, E]"]) -> "Result[U, E]" | Self:
         """
         >>> Ok(1).and_then(lambda x: Ok(x + 1))
         Ok(2)
@@ -149,27 +149,20 @@ class _Result[T, E](ABC):
     def __or__(self, other: T) -> T:
         return self.unwrap_or(other)
 
-    def __rshift__[U](self, mapper: Callable[[T], "_Result[U, E]"]) -> "_Result[U, E]" | Self:
+    def __rshift__[U](self, mapper: Callable[[T], "Result[U, E]"]) -> "Result[U, E]" | Self:
         return self.and_then(mapper)
 
 
 @dataclass
-class Ok[T](_Result[T, Any]):
-    value: T
-
+class Ok[T](Result[T, Any]):
     def __repr__(self) -> str:
         return f"Ok({self.value!r})"
 
 
 @dataclass
-class Err[T](_Result[Any, T]):
-    value: T
-
+class Err[T](Result[Any, T]):
     def __repr__(self) -> str:
         return f"Err({self.value!r})"
-
-
-type Result[T_Ok, T_Err] = Ok[T_Ok] | Err[T_Err]
 
 
 def catch[**P, T](
