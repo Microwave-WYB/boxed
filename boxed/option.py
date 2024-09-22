@@ -1,3 +1,4 @@
+from abc import ABC
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import wraps
@@ -7,9 +8,49 @@ from typing import Optional
 from boxed.error import UnwrapError
 
 
-class _Option[T]:
+class Option[T](ABC):
+    """
+    Option[T] represents an optional value.
+    Every Option is either Some and contains a value of type T, or Null.
+
+    Examples
+    --------
+    >>> Option.from_(1)
+    Some(1)
+    >>> Option.from_(None)
+    Null()
+    >>> Some(1).unwrap()
+    1
+    >>> Null().unwrap()
+    Traceback (most recent call last):
+        ...
+    boxed.error.UnwrapError
+    >>> Some(1).unwrap_or(2)
+    1
+    >>> Null().unwrap_or(2)
+    2
+    >>> Some(1).unwrap_or_else(lambda: 2)
+    1
+    >>> Null().unwrap_or_else(lambda: 2)
+    2
+    """
+
     def __init__(self, value: Optional[T]) -> None:
         self.value = value
+
+    @staticmethod
+    def from_(value: Optional[T]) -> "Option[T]":
+        """
+        >>> Option.from_(1)
+        Some(1)
+        >>> Option.from_(None)
+        Null()
+        """
+        match value:
+            case None:
+                return Null()
+            case _:
+                return Some(value)
 
     def unwrap(self) -> T:
         """
@@ -20,9 +61,11 @@ class _Option[T]:
             ...
         boxed.error.UnwrapError
         """
-        if self.value is None:
-            raise UnwrapError
-        return self.value
+        match self.value:
+            case None:
+                raise UnwrapError
+            case _:
+                return self.value
 
     def unwrap_or(self, default: T, /) -> T:
         """
@@ -31,9 +74,11 @@ class _Option[T]:
         >>> Null().unwrap_or(2)
         2
         """
-        if self.value is None:
-            return default
-        return self.value
+        match self.value:
+            case None:
+                return default
+            case _:
+                return self.value
 
     def unwrap_or_else(self, f: Callable[[], T], /) -> T:
         """
@@ -42,9 +87,11 @@ class _Option[T]:
         >>> Null().unwrap_or_else(lambda: 2)
         2
         """
-        if self.value is None:
-            return f()
-        return self.value
+        match self.value:
+            case None:
+                return f()
+            case _:
+                return self.value
 
     def expect(self, msg: str, /) -> T:
         """
@@ -55,9 +102,11 @@ class _Option[T]:
             ...
         boxed.error.UnwrapError: Error
         """
-        if self.value is None:
-            raise UnwrapError(msg)
-        return self.value
+        match self.value:
+            case None:
+                raise UnwrapError(msg)
+            case _:
+                return self.value
 
     def is_some(self) -> bool:
         """
@@ -77,29 +126,33 @@ class _Option[T]:
         """
         return self.value is None
 
-    def map(self, mapper: Callable[[T], T], /) -> "_Option[T]":
+    def map(self, mapper: Callable[[T], T], /) -> "Option[T]":
         """
         >>> Some(1).map(lambda x: x + 1)
         Some(2)
         >>> Null().map(lambda x: x + 1)
         Null()
         """
-        if self.value is None:
-            return Null()
-        return Some(mapper(self.value))
+        match self.value:
+            case None:
+                return Null()
+            case _:
+                return Some(mapper(self.value))
 
-    def and_then[U](self, mapper: Callable[[T], "_Option[U]"], /) -> "_Option[U]":
+    def and_then[U](self, mapper: Callable[[T], "Option[U]"], /) -> "Option[U]":
         """
         >>> Some(1).and_then(lambda x: Some(x + 1))
         Some(2)
         >>> Some(1).and_then(lambda x: Null())
         Null()
         """
-        if self.value is None:
-            return Null()
-        return mapper(self.value)
+        match self.value:
+            case None:
+                return Null()
+            case _:
+                return mapper(self.value)
 
-    def or_(self, optb: "_Option[T]", /) -> "_Option[T]":
+    def or_(self, optb: "Option[T]", /) -> "Option[T]":
         """
         >>> Some(1).or_(Some(2))
         Some(1)
@@ -110,50 +163,60 @@ class _Option[T]:
         >>> Null().or_(Null())
         Null()
         """
-        if self.value is None:
-            return optb
-        return self
+        match self.value:
+            case None:
+                return optb
+            case _:
+                return self
 
-    def or_else(self, f: Callable[[], "_Option[T]"], /) -> "_Option[T]":
+    def or_else(self, f: Callable[[], "Option[T]"], /) -> "Option[T]":
         """
         >>> Some(1).or_else(lambda: Null())
         Some(1)
         >>> Null().or_else(lambda: Some(2))
         Some(2)
         """
-        if self.value is None:
-            return f()
-        return self
+        match self.value:
+            case None:
+                return f()
+            case _:
+                return self
 
     def __bool__(self) -> bool:
         return self.is_some()
 
     def __eq__(self, other: object, /) -> bool:
-        if self.value is None:
-            return other is None
-        return self.value == other
+        match self, other:
+            case (Some(a), Some(b)):
+                return a == b
+            case (Null(), Null()):
+                return True
+            case _:
+                return False
 
     def __repr__(self) -> str:
-        if self.value is None:
-            return "Null()"
-        return f"Some({self.value!r})"
+        match self.value:
+            case None:
+                return "Null()"
+            case _:
+                return f"Some({self.value!r})"
 
-    def __or__(self, optb: "_Option[T]", /) -> "_Option[T]":
+    def __or__(self, optb: "Option[T]", /) -> "Option[T]":
         return self.or_(optb)
 
-    def __rshift__[U](self, mapper: Callable[[T], "_Option[U]"], /) -> "_Option[U]":
+    def __rshift__[U](self, mapper: Callable[[T], "Option[U]"], /) -> "Option[U]":
         return self.and_then(mapper)
 
 
 @dataclass
-class Some[T](_Option[T]):
+class Some[T](Option[T]):
     value: T
 
     def __repr__(self) -> str:
         return f"Some({self.value!r})"
 
 
-class Null[T: None](_Option[T]):
+class Null[T: None](Option[T]):  # named as `Null` to avoid conflict with `None`
     def __init__(self) -> None:
         super().__init__(None)
 
@@ -161,19 +224,22 @@ class Null[T: None](_Option[T]):
         return "Null()"
 
 
-type Option[T] = Some[T] | Null[None]
-
-
-def as_option[T](value: Optional[T]) -> Option[T]:
-    if value is None:
-        return Null()
-    return Some(value)
-
-
 def option[**P, T](f: Callable[P, Optional[T]]) -> Callable[P, Option[T]]:
+    """
+    Convert a function returning an Optional into an Option
+
+    >>> @option
+    ... def parse_int(s: str) -> Optional[int]:
+    ...     return int(s) if s.isdigit() else None
+    >>> parse_int("123")
+    Some(123)
+    >>> parse_int("abc")
+    Null()
+    """
+
     @wraps(f)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> Option[T]:
         value = f(*args, **kwargs)
-        return as_option(value)
+        return Option.from_(value)
 
     return wrapper

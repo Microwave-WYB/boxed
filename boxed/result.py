@@ -9,6 +9,45 @@ from boxed.error import UnwrapError
 
 @dataclass
 class Result[T, E](ABC):
+    """
+    Result[T, E] represents a value that may or may not be valid.
+
+    Examples
+    --------
+    >>> Ok(1)
+    Ok(1)
+    >>> Err("Error")
+    Err('Error')
+    >>> Ok(1).is_ok()
+    True
+    >>> Err("Error").is_ok()
+    False
+    >>> Ok(1).is_err()
+    False
+    >>> Err("Error").is_err()
+    True
+    >>> Ok(1).unwrap()
+    1
+    >>> Err("Error").unwrap()
+    Traceback (most recent call last):
+        ...
+    boxed.error.UnwrapError: Error
+    >>> Ok(1).unwrap_or(2)
+    1
+    >>> Err("Error").unwrap_or(2)
+    2
+    >>> Ok(1).unwrap_or_else(lambda: 2)
+    1
+    >>> Err("Error").unwrap_or_else(lambda: 2)
+    2
+    >>> Ok(1).expect("Error")
+    1
+    >>> Err("Error").expect("Error")
+    Traceback (most recent call last):
+        ...
+    boxed.error.UnwrapError: Error
+    """
+
     value: T | E
 
     def unwrap(self) -> T:
@@ -28,7 +67,7 @@ class Result[T, E](ABC):
             case _:
                 raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
-    def expect(self, msg: str) -> T:
+    def expect(self, msg: str, /) -> T:
         """
         >>> Ok(1).expect("Error")
         1
@@ -45,7 +84,7 @@ class Result[T, E](ABC):
             case _:
                 raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
-    def unwrap_or(self, default: T) -> T:
+    def unwrap_or(self, default: T, /) -> T:
         """
         >>> Ok(1).unwrap_or(2)
         1
@@ -60,7 +99,7 @@ class Result[T, E](ABC):
             case _:
                 raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
-    def unwrap_or_else(self, default: Callable[[], T]) -> T:
+    def unwrap_or_else(self, default: Callable[[], T], /) -> T:
         """
         >>> Ok(1).unwrap_or_else(lambda: 2)
         1
@@ -105,7 +144,7 @@ class Result[T, E](ABC):
             case _:
                 raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
-    def map(self, mapper: Callable[[T], T]) -> "Result[T, E]":
+    def map(self, mapper: Callable[[T], T], /) -> "Result[T, E]":
         """
         >>> Ok(1).map(lambda x: x + 1)
         Ok(2)
@@ -120,7 +159,7 @@ class Result[T, E](ABC):
             case _:
                 raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
-    def map_err(self, mapper: Callable[[E], E]) -> "Result[T, E]":
+    def map_err(self, mapper: Callable[[E], E], /) -> "Result[T, E]":
         """
         >>> Ok(1).map_err(lambda x: x + 1)
         Ok(1)
@@ -135,7 +174,7 @@ class Result[T, E](ABC):
             case _:
                 raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
-    def and_then[U](self, mapper: Callable[[T], "Result[U, E]"]) -> "Result[U, E]" | Self:
+    def and_then[U](self, mapper: Callable[[T], "Result[U, E]"], /) -> "Result[U, E]" | Self:
         """
         >>> Ok(1).and_then(lambda x: Ok(x + 1))
         Ok(2)
@@ -183,21 +222,107 @@ class Err[T](Result[Any, T]):
         return f"Err({self.value!r})"
 
 
-def catch[**P, T](func: Callable[P, T]) -> Callable[P, Result[T, Exception]]:
+def catch[**P, T, E: Exception](func: Callable[P, Result[T, E]]) -> Callable[P, Result[T, E]]:
     """
+    Catch all exceptions and return an Err of the exception
+
     >>> @catch
-    ... def div(a: float, b: float) -> float:
-    ...     return a / b
-    >>> div(10, 0)
+    ... def divide(a: float, b: float) -> Result[float, Exception]:
+    ...     return Ok(a / b)
+    >>> divide(10, 2)
+    Ok(5.0)
+    >>> divide(10, 0)
     Err(ZeroDivisionError('division by zero'))
     """
 
     @wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[T, Exception]:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[T, E]:
         try:
-            result = func(*args, **kwargs)
-            return Ok(result) if not isinstance(result, Result) else result
+            return func(*args, **kwargs)
         except Exception as e:
             return Err(e)
 
     return wrapper
+
+
+def catch_repr[**P, T](
+    func: Callable[P, Result[T, str]],
+) -> Callable[P, Result[T, str]]:
+    """
+    Catch all exceptions and return an Err of the exception's __repr__
+
+    >>> @catch_repr
+    ... def divide(a: float, b: float) -> Result[float, str]:
+    ...     return Ok(a / b)
+    >>> divide(10, 2)
+    Ok(5.0)
+    >>> divide(10, 0)
+    Err("ZeroDivisionError('division by zero')")
+    """
+
+    @wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[T, str]:
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            return Err(e.__repr__())
+
+    return wrapper
+
+
+def catch_msg[**P, T](
+    func: Callable[P, Result[T, str]],
+) -> Callable[P, Result[T, str]]:
+    """
+    Catch all exceptions and return an Err of the exception's __str__
+
+    >>> @catch_msg
+    ... def divide(a: float, b: float) -> Result[float, str]:
+    ...     return Ok(a / b)
+    >>> divide(10, 2)
+    Ok(5.0)
+    >>> divide(10, 0)
+    Err('division by zero')
+    """
+
+    @wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[T, str]:
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            return Err(str(e))
+
+    return wrapper
+
+
+def catch_map[**P, T, E](
+    exception_type: type[Exception] | tuple[type[Exception], ...],
+    mapper: Callable[[Exception], Result[T, E]],
+) -> Callable[[Callable[P, Result[T, E]]], Callable[P, Result[T, E]]]:
+    """
+    Catch excpetions of specified types and map them to an Err of the mapped type
+
+    >>> @catch_map((TypeError, ValueError), lambda _: Err("Invalid input"))
+    ... @catch_map(ZeroDivisionError, lambda _: Err("Division by zero"))
+    ... def divide(a: float, b: float) -> Result[float, str]:
+    ...     return Ok(a / b)
+    >>> divide(10, 2)
+    Ok(5.0)
+    >>> divide(10, 0)
+    Err('Division by zero')
+    >>> divide("hello", 0)
+    Err('Invalid input')
+    """
+
+    def decorator(func: Callable[P, Result[T, E]]) -> Callable[P, Result[T, E]]:
+        @wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[T, E]:
+            try:
+                result = func(*args, **kwargs)
+                return result
+            except exception_type as e:
+                return mapper(e)
+
+        return wrapper
+
+    return decorator
