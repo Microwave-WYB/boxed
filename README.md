@@ -16,7 +16,8 @@ This library strongly rely on Python 3.12's generic typing syntax. Make sure you
 To install the library, run
 
 ```bash
-pip install boxed
+# pip install boxed  # this will not work at the moment
+pip install git+https://github.com/Microwave-WYB/boxed.git
 ```
 
 ## Usage
@@ -25,12 +26,10 @@ pip install boxed
 
 The `Option` type in this library provides a safe and expressive way to handle potentially absent values in Python. It's an implementation of the Option monad, a concept from functional programming that helps eliminate null pointer exceptions and makes code more readable.
 
-### Basic Usage
-
 #### Creating Options
 
 ```python
-from boxed import Some, Null, Option
+from boxed.option import Some, Null, Option
 
 # For a present value
 some_value = Some(42)
@@ -40,6 +39,17 @@ no_value = Null()
 
 # Create from a value that might be None
 maybe_value = Option.from_(some_function_that_might_return_none())
+```
+
+#### Basic Usage with `match`
+
+```python
+value = some_function_that_might_return_none()
+match value:
+    case Some(v):
+        v.do_something
+    case Null():
+        print("skipping")
 ```
 
 #### Unwrapping Values
@@ -85,7 +95,7 @@ result = no_value.or_(Some(42))
 result = no_value.or_else(lambda: Some(compute_alternative()))
 ```
 
-### Using the Option Decorator
+#### Using the Option Decorator
 
 The `@option` decorator can be used to convert functions that return `Optional[T]` to functions that return `Option[T]`:
 
@@ -100,4 +110,4 @@ result = parse_int("123")  # Returns Some(123)
 result = parse_int("abc")  # Returns Null()
 ```
 
-By using `Option`, you can write more expressive and safer code, reducing the risk of null pointer exceptions and making your intentions clearer when dealing with values that may or may not be present.
+By using `Option`, you can write more expressive and safer code, reducing the risk of attribute errors when calling optional objects.
