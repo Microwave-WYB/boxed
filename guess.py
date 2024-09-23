@@ -16,7 +16,7 @@ def parse_guess(input_str: str) -> Result[int, str]:
     if 1 <= num <= 100:
         return Ok(num)
     else:
-        return Err(ValueError("Please enter a number between 1 and 100."))
+        return Err("Please enter a number between 1 and 100.")
 
 
 def play_game() -> None:

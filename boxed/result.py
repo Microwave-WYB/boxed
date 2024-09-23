@@ -212,17 +212,21 @@ class Result[T, E](ABC):
 
 @dataclass
 class Ok[T](Result[T, Any]):
+    value: T
+
     def __repr__(self) -> str:
         return f"Ok({self.value!r})"
 
 
 @dataclass
-class Err[T](Result[Any, T]):
+class Err[E](Result[Any, E]):
+    value: E
+
     def __repr__(self) -> str:
         return f"Err({self.value!r})"
 
 
-def catch[**P, T, E: Exception](func: Callable[P, Result[T, E]]) -> Callable[P, Result[T, E]]:
+def catch[**P, T](func: Callable[P, Result[T, Exception]]) -> Callable[P, Result[T, Exception]]:
     """
     Catch all exceptions and return an Err of the exception
 
@@ -236,7 +240,7 @@ def catch[**P, T, E: Exception](func: Callable[P, Result[T, E]]) -> Callable[P, 
     """
 
     @wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[T, E]:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[T, Exception]:
         try:
             return func(*args, **kwargs)
         except Exception as e:
