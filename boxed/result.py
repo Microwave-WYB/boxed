@@ -144,7 +144,7 @@ class Result[T, E](ABC):
             case _:
                 raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
-    def map(self, mapper: Callable[[T], T], /) -> "Result[T, E]":
+    def map[U](self, mapper: Callable[[T], U], /) -> "Result[U, E]":
         """
         >>> Ok(1).map(lambda x: x + 1)
         Ok(2)
@@ -159,7 +159,7 @@ class Result[T, E](ABC):
             case _:
                 raise TypeError(f"Result can only be either Ok or Err, not {type(self)}")
 
-    def map_err(self, mapper: Callable[[E], E], /) -> "Result[T, E]":
+    def map_err[E_New](self, mapper: Callable[[E], E_New], /) -> "Result[T, E_New]":
         """
         >>> Ok(1).map_err(lambda x: x + 1)
         Ok(1)

@@ -126,7 +126,7 @@ class Option[T](ABC):
         """
         return self.value is None
 
-    def map(self, mapper: Callable[[T], T], /) -> "Option[T]":
+    def map[U](self, mapper: Callable[[T], U], /) -> "Option[U]":
         """
         >>> Some(1).map(lambda x: x + 1)
         Some(2)
