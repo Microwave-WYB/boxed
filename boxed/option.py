@@ -48,7 +48,7 @@ class Option[T](ABC):
         """
         match value:
             case None:
-                return Null()
+                return _Null()
             case _:
                 return Some(value)
 
@@ -135,7 +135,7 @@ class Option[T](ABC):
         """
         match self.value:
             case None:
-                return Null()
+                return _Null()
             case _:
                 return Some(mapper(self.value))
 
@@ -148,7 +148,7 @@ class Option[T](ABC):
         """
         match self.value:
             case None:
-                return Null()
+                return _Null()
             case _:
                 return mapper(self.value)
 
@@ -189,7 +189,7 @@ class Option[T](ABC):
         match self, other:
             case (Some(a), Some(b)):
                 return a == b
-            case (Null(), Null()):
+            case (_Null(), _Null()):
                 return True
             case _:
                 return False
@@ -216,12 +216,15 @@ class Some[T](Option[T]):
         return f"Some({self.value!r})"
 
 
-class Null[T: None](Option[T]):  # named as `Null` to avoid conflict with `None`
+class _Null[T: None](Option[T]):  # named as `Null` to avoid conflict with `None`
     def __init__(self) -> None:
         super().__init__(None)
 
     def __repr__(self) -> str:
         return "Null()"
+
+
+Null = _Null()  # The only instance of `Null`
 
 
 def option[**P, T](f: Callable[P, Optional[T]]) -> Callable[P, Option[T]]:
