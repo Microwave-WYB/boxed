@@ -39,7 +39,7 @@ class Option[T](ABC):
         self.value = value
 
     @staticmethod
-    def from_(value: Optional[T]) -> "Option[T]":
+    def from_[U](value: Optional[U]) -> "Option[U]":
         """
         >>> Option.from_(1)
         Some(1)
