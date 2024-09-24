@@ -203,10 +203,7 @@ class Result[T, E](ABC):
             case _:
                 return False
 
-    def __or__(self, other: T) -> T:
-        return self.unwrap_or(other)
-
-    def __rshift__[U](self, mapper: Callable[[T], "Result[U, E]"]) -> "Result[U, E]" | Self:
+    def __or__[U](self, mapper: Callable[[T], "Result[U, E]"]) -> "Result[U, E]" | Self:
         return self.and_then(mapper)
 
 
