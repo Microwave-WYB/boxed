@@ -35,7 +35,7 @@ from boxed.option import Some, Null, Option
 some_value = Some(42)
 
 # For an absent value
-no_value = Null
+no_value = Null()
 
 # Create from a value that might be None
 maybe_value = Option.from_(some_function_that_might_return_none())
@@ -48,7 +48,7 @@ value = some_function_that_might_return_none()
 match value:
     case Some(v):
         v.do_something
-    case Null:
+    case Null():
         print("skipping")
 ```
 
@@ -82,7 +82,7 @@ if no_value.is_none():
 doubled = some_value.map(lambda x: x * 2)
 
 # Chain operations that return Options
-result = some_value.and_then(lambda x: Some(x) if x > 0 else Null)
+result = some_value.and_then(lambda x: Some(x) if x > 0 else Null())
 ```
 
 #### Combining Options
@@ -107,7 +107,7 @@ def parse_int(s: str) -> Optional[int]:
     return int(s) if s.isdigit() else None
 
 result = parse_int("123")  # Returns Some(123)
-result = parse_int("abc")  # Returns Null
+result = parse_int("abc")  # Returns Null()
 ```
 
 By using `Option`, you can write more expressive and safer code, reducing the risk of attribute errors when calling optional objects.
