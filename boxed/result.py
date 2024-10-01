@@ -8,7 +8,7 @@ from boxed.error import UnwrapError
 
 
 @dataclass
-class Result[T, E](ABC):
+class _Result[T, E](ABC):
     """
     Result[T, E] represents a value that may or may not be valid.
 
@@ -208,7 +208,7 @@ class Result[T, E](ABC):
 
 
 @dataclass
-class Ok[T](Result[T, Any]):
+class Ok[T](_Result[T, Any]):
     value: T
 
     def __repr__(self) -> str:
@@ -216,11 +216,14 @@ class Ok[T](Result[T, Any]):
 
 
 @dataclass
-class Err[E](Result[Any, E]):
+class Err[E](_Result[Any, E]):
     value: E
 
     def __repr__(self) -> str:
         return f"Err({self.value!r})"
+
+
+type Result[T, E] = Ok[T] | Err[E]
 
 
 def catch[**P, T](func: Callable[P, Result[T, Exception]]) -> Callable[P, Result[T, Exception]]:
