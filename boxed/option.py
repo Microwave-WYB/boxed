@@ -198,7 +198,7 @@ class Some[T](_Option[T]):
         return f"Some({self.value!r})"
 
 
-class Null[T: None](_Option[T]):  # named as `Null` to avoid conflict with `None`
+class Null[T](_Option[T]):  # named as `Null` to avoid conflict with `None`
     def __init__(self) -> None:
         super().__init__(None)
 
@@ -206,7 +206,7 @@ class Null[T: None](_Option[T]):  # named as `Null` to avoid conflict with `None
         return "Null()"
 
 
-type Option[T] = Some[T] | Null[None]
+type Option[T] = Some[T] | Null[T]
 
 
 def to_option[T](value: Optional[T], /) -> Option[T]:
