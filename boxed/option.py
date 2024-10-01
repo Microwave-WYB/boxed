@@ -3,22 +3,18 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from functools import wraps
 from re import T
-from typing import Optional
+from typing import Optional, cast
 
 from boxed.error import UnwrapError
 
 
-class Option[T](ABC):
+class _Option[T](ABC):
     """
     Option[T] represents an optional value.
     Every Option is either Some and contains a value of type T, or Null.
 
     Examples
     --------
-    >>> Option.from_(1)
-    Some(1)
-    >>> Option.from_(None)
-    Null()
     >>> Some(1).unwrap()
     1
     >>> Null().unwrap()
@@ -37,20 +33,6 @@ class Option[T](ABC):
 
     def __init__(self, value: Optional[T]) -> None:
         self.value = value
-
-    @staticmethod
-    def from_[U](value: Optional[U]) -> "Option[U]":
-        """
-        >>> Option.from_(1)
-        Some(1)
-        >>> Option.from_(None)
-        Null()
-        """
-        match value:
-            case None:
-                return Null()
-            case _:
-                return Some(value)
 
     def unwrap(self) -> T:
         """
@@ -167,7 +149,7 @@ class Option[T](ABC):
             case None:
                 return optb
             case _:
-                return self
+                return cast("Some[T]", self)
 
     def or_else(self, f: Callable[[], "Option[T]"], /) -> "Option[T]":
         """
@@ -180,7 +162,7 @@ class Option[T](ABC):
             case None:
                 return f()
             case _:
-                return self
+                return cast("Some[T]", self)
 
     def __bool__(self) -> bool:
         return self.is_some()
@@ -209,19 +191,34 @@ class Option[T](ABC):
 
 
 @dataclass
-class Some[T](Option[T]):
+class Some[T](_Option[T]):
     value: T
 
     def __repr__(self) -> str:
         return f"Some({self.value!r})"
 
 
-class Null[T: None](Option[T]):  # named as `Null` to avoid conflict with `None`
+class Null[T: None](_Option[T]):  # named as `Null` to avoid conflict with `None`
     def __init__(self) -> None:
         super().__init__(None)
 
     def __repr__(self) -> str:
         return "Null()"
+
+
+type Option[T] = Some[T] | Null[None]
+
+
+def to_option[T](value: Optional[T], /) -> Option[T]:
+    """
+    Convert a value into an Option
+
+    >>> to_option(1)
+    Some(1)
+    >>> to_option(None)
+    Null()
+    """
+    return Some(value) if value is not None else Null()
 
 
 def option[**P, T](f: Callable[P, Optional[T]]) -> Callable[P, Option[T]]:
@@ -240,6 +237,6 @@ def option[**P, T](f: Callable[P, Optional[T]]) -> Callable[P, Option[T]]:
     @wraps(f)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> Option[T]:
         value = f(*args, **kwargs)
-        return Option.from_(value)
+        return to_option(value)
 
     return wrapper
